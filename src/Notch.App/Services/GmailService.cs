@@ -110,7 +110,7 @@ public sealed class GmailService : IDisposable
     private async Task<uint> FetchNewAsync(IMailFolder inbox, uint lastUid, CancellationToken ct)
     {
         var range = new UniqueIdRange(new UniqueId(lastUid + 1), UniqueId.MaxValue);
-        var query = SearchQuery.Uids(range).And(SearchQuery.GMailRaw(Query));
+        var query = SearchQuery.Uids(range).And(SearchQuery.GMailRawSearch(Query));
         var uids = await inbox.SearchAsync(query, ct);
         var highest = lastUid;
 
