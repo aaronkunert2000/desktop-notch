@@ -9,10 +9,16 @@ $ErrorActionPreference = 'Stop'
 $root   = Split-Path -Parent $PSScriptRoot
 $target = Join-Path $env:LOCALAPPDATA 'Programs\Notch'
 $build  = Join-Path $env:TEMP 'notch-build'
-$send   = Join-Path $root 'scripts\notch_send.py'
 
+# Meldung ans Notch direkt per HTTP (ohne Python, funktioniert auch im Hintergrund-Watcher)
 function Notify([string]$kind, [string]$title, [string]$subtitle) {
-    try { & python $send --source notch-update --kind $kind --title $title --subtitle $subtitle } catch { }
+    try {
+        $token = (Get-Content (Join-Path $env:APPDATA 'Notch\token') -Raw).Trim()
+        $body  = @{ source = 'notch-update'; kind = $kind; title = $title; subtitle = $subtitle } | ConvertTo-Json -Compress
+        Invoke-RestMethod -Uri 'http://localhost:47321/event' -Method Post -TimeoutSec 2 `
+            -Body ([Text.Encoding]::UTF8.GetBytes($body)) -ContentType 'application/json; charset=utf-8' `
+            -Headers @{ 'X-Notch-Token' = $token } | Out-Null
+    } catch { }
 }
 
 Set-Location $root
