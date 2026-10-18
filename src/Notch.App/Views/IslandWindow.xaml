@@ -1,0 +1,142 @@
+<Window x:Class="Notch.Views.IslandWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Notch" Width="480" Height="240"
+        WindowStyle="None" AllowsTransparency="True" Background="{x:Null}"
+        ShowInTaskbar="False" Topmost="True" ShowActivated="False" ResizeMode="NoResize"
+        Focusable="False" UseLayoutRounding="True" SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+    </Window.Resources>
+
+    <!-- Background=null: Fläche außerhalb der Insel ist klick-durchlässig -->
+    <Grid>
+      <!-- Host: trägt Position + Drop-Verschiebung, Insel und Leuchtrand bewegen sich gemeinsam -->
+      <Grid x:Name="IslandHost" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0">
+        <Grid.RenderTransform><TranslateTransform x:Name="IslandShift"/></Grid.RenderTransform>
+
+        <Border x:Name="Island"
+                Width="90" Height="8" CornerRadius="4" Opacity="0" IsHitTestVisible="False"
+                Background="{StaticResource IslandBrush}" Cursor="Hand"
+                MouseEnter="OnIslandEnter" MouseLeave="OnIslandLeave"
+                MouseLeftButtonUp="OnIslandClick">
+
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270"
+                                  Opacity="0.45" Color="Black"/>
+            </Border.Effect>
+
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Beenden" Click="OnExit"/>
+                </ContextMenu>
+            </Border.ContextMenu>
+
+            <Grid x:Name="Body" Margin="20,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Kopfzeile: Icon + Texte -->
+                <Grid x:Name="Header" Height="36">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Width="26" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <!-- Cover (Spotify) -->
+                        <Border Width="24" Height="24" CornerRadius="6"
+                                Visibility="{Binding ShowArtwork, Converter={StaticResource B2V}}">
+                            <Border.Background>
+                                <ImageBrush ImageSource="{Binding Artwork}" Stretch="UniformToFill"/>
+                            </Border.Background>
+                        </Border>
+
+                        <!-- Wave (läuft) -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Visibility="{Binding IsRunning, Converter={StaticResource B2V}}">
+                            <Border Width="3" Height="16" CornerRadius="1.5" Margin="1.5,0" Background="{Binding Accent}" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform><ScaleTransform x:Name="Bar1T" ScaleY="0.4"/></Border.RenderTransform>
+                            </Border>
+                            <Border Width="3" Height="16" CornerRadius="1.5" Margin="1.5,0" Background="{Binding Accent}" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform><ScaleTransform x:Name="Bar2T" ScaleY="0.4"/></Border.RenderTransform>
+                            </Border>
+                            <Border Width="3" Height="16" CornerRadius="1.5" Margin="1.5,0" Background="{Binding Accent}" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform><ScaleTransform x:Name="Bar3T" ScaleY="0.4"/></Border.RenderTransform>
+                            </Border>
+                            <Border Width="3" Height="16" CornerRadius="1.5" Margin="1.5,0" Background="{Binding Accent}" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform><ScaleTransform x:Name="Bar4T" ScaleY="0.4"/></Border.RenderTransform>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Glyph (alle anderen Zustände) -->
+                        <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="18"
+                                   Foreground="{Binding Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   RenderTransformOrigin="0.5,0.5"
+                                   Visibility="{Binding ShowGlyph, Converter={StaticResource B2V}}">
+                            <TextBlock.RenderTransform><ScaleTransform x:Name="GlyphScale"/></TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Grid>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource UiFont}" FontSize="13.5"
+                                   FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Subtitle}" FontFamily="{StaticResource UiFont}" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   Visibility="{Binding ShowSubtitle, Converter={StaticResource B2V}}"/>
+                    </StackPanel>
+
+                    <!-- Mediensteuerung (Spotify, aufgeklappt) -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                                Visibility="{Binding ShowMediaControls, Converter={StaticResource B2V}}">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE892;" Tag="prev" Click="OnMediaClick"/>
+                        <Button Style="{StaticResource IconButton}" Content="{Binding PlayPauseGlyph}" Tag="toggle"
+                                Click="OnMediaClick" FontSize="18"/>
+                        <Button Style="{StaticResource IconButton}" Content="&#xE893;" Tag="next" Click="OnMediaClick"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Aktionen (nur Large) -->
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Actions}" VerticalAlignment="Center"
+                              Margin="36,0,0,0"
+                              Visibility="{Binding ShowActions, Converter={StaticResource B2V}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Label}" Tag="{Binding Id}" Click="OnActionClick">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource PillButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Primary}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource AccentBlueBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+
+        <!-- Leuchtrand bei neuem Event (Farbe = Event-Akzent, gesetzt im Code) -->
+        <Border x:Name="Glow" IsHitTestVisible="False" Opacity="0" BorderThickness="1.5"
+                Width="{Binding ActualWidth, ElementName=Island}"
+                Height="{Binding ActualHeight, ElementName=Island}"
+                CornerRadius="{Binding CornerRadius, ElementName=Island}">
+            <Border.Effect>
+                <DropShadowEffect x:Name="GlowShadow" ShadowDepth="0" BlurRadius="18" Opacity="0.9"/>
+            </Border.Effect>
+        </Border>
+      </Grid>
+    </Grid>
+</Window>

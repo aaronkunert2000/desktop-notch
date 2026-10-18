@@ -1,0 +1,20 @@
+{
+  // Port des lokalen Endpunkts (nur localhost). notch_send.py nutzt NOTCH_PORT oder 47321.
+  "port": 47321,
+  // Globaler Hotkey: Quick Actions öffnen bzw. Insel auf-/zuklappen
+  "hotkey": "Ctrl+Alt+N",
+  // Demo-Events beim Start abspielen
+  "demo": false,
+  // Spotify anzeigen, solange Musik läuft
+  "spotify": true,
+  // WhatsApp-Benachrichtigungen übernehmen (experimentell); Preview = Nachrichtentext anzeigen
+  "whatsApp": true,
+  "whatsAppPreview": true,
+  // Fokus-Timer in Minuten
+  "focusMinutes": 25,
+  "breakMinutes": 5,
+  // Quick Action "Neue Notiz": Zielordner im Vault, z. B. "C:\\Users\\aaron\\Obsidian\\Vault\\00 Inbox" (leer = aus)
+  "vaultInbox": "C:\\Users\\aaron\\AI\\Obsidian\\Obsidian-Vaults\\Aarons Second Brain\\30_AI_Inbox",
+  // Quick Action "Claude": URI oder Programmpfad
+  "claudeCommand": "claude://"
+}

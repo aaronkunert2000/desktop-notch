@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 10.0.19041 = Windows 10 2004+: nötig für die Windows-Mediensteuerung (Spotify) -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms nur für das Tray-Icon -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Notch</RootNamespace>
+    <AssemblyName>Notch</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Namenskonflikte WPF/WinForms vermeiden (Application, Button, Brush …) -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\config.json" Link="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
