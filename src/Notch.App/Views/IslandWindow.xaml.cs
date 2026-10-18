@@ -44,6 +44,8 @@ public partial class IslandWindow : Window
     private readonly IslandViewModel _vm;
     private IslandState _prevState = IslandState.Idle;
 
+    private readonly System.Windows.Threading.DispatcherTimer _hoverCheck = new() { Interval = TimeSpan.FromMilliseconds(250) };
+
     public IslandWindow(IslandViewModel vm)
     {
         InitializeComponent();
@@ -54,6 +56,9 @@ public partial class IslandWindow : Window
         Top = 0;
 
         vm.PropertyChanged += OnVmChanged;
+        _hoverCheck.Tick += (_, _) => CheckHover();
+        _hoverCheck.Start();
+
         vm.EventShown += kind =>
         {
             Flash();
@@ -168,6 +173,29 @@ public partial class IslandWindow : Window
 
     private void OnIslandEnter(object sender, MouseEventArgs e) => _vm.SetHover(true);
     private void OnIslandLeave(object sender, MouseEventArgs e) => _vm.SetHover(false);
+
+    [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT p);
+
+    /// <summary>
+    /// Gegenprüfung per Mausposition: Springt der Zeiger schnell weg (oder wächst die Insel unter ihn),
+    /// meldet WPF Enter/Leave nicht immer zuverlässig.
+    /// </summary>
+    private void CheckHover()
+    {
+        if (_vm.State == IslandState.Idle || !Island.IsVisible || !GetCursorPos(out var p)) return;
+        try
+        {
+            var topLeft = Island.PointToScreen(new Point(0, 0));
+            var bottomRight = Island.PointToScreen(new Point(Island.ActualWidth, Island.ActualHeight));
+            var inside = p.X >= topLeft.X && p.X <= bottomRight.X && p.Y >= topLeft.Y && p.Y <= bottomRight.Y;
+            _vm.SetHover(inside);
+        }
+        catch (InvalidOperationException)
+        {
+            // Fenster gerade nicht sichtbar
+        }
+    }
     private void OnIslandClick(object sender, MouseButtonEventArgs e) => _vm.Click();
 
     private void OnActionClick(object sender, RoutedEventArgs e)

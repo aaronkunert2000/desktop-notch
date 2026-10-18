@@ -110,7 +110,7 @@ $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
 $cx = $screen.X + [int]($screen.Width / 2)
 $orig = [System.Windows.Forms.Cursor]::Position
 function MoveTo([int]$y) { [Native.Input]::SetCursorPos($cx, $screen.Y + $y) | Out-Null }
-function MoveAway { [Native.Input]::SetCursorPos($orig.X, [Math]::Max($orig.Y, $screen.Y + 400)) | Out-Null }
+function MoveAway { [Native.Input]::SetCursorPos($screen.X + 40, $screen.Bottom - 120) | Out-Null }
 function WheelDown { [Native.Input]::mouse_event(0x0800, 0, 0, -120, [IntPtr]::Zero) }
 function Hotkey {   # Ctrl+Alt+N
     [Native.Input]::keybd_event(0x11, 0, 0, [IntPtr]::Zero); [Native.Input]::keybd_event(0x12, 0, 0, [IntPtr]::Zero)

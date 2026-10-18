@@ -19,6 +19,7 @@ public sealed class HotkeyService : IDisposable
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     private HwndSource? _source;
+    private long _lastPress;
     private IntPtr _hwnd;
 
     public event Action? Pressed;
@@ -50,8 +51,12 @@ public sealed class HotkeyService : IDisposable
     {
         if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId)
         {
-            Pressed?.Invoke();
             handled = true;
+            // Entprellen: doppelt zugestellte Tastendrücke innerhalb von 300 ms ignorieren
+            var now = Environment.TickCount64;
+            if (now - _lastPress < 300) return IntPtr.Zero;
+            _lastPress = now;
+            Pressed?.Invoke();
         }
         return IntPtr.Zero;
     }

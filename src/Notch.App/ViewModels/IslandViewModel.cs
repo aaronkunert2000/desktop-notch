@@ -234,6 +234,7 @@ public sealed class IslandViewModel : ObservableObject
     public void Hide()
     {
         _ttl.Stop();
+        _hovering = false;   // nach dem Einklappen beginnt Hover neu
         StopBrowsing();
         _hoverExpanded = false;
         _currentEvent = null;
@@ -406,6 +407,7 @@ public sealed class IslandViewModel : ObservableObject
 
     public void SetHover(bool over)
     {
+        if (over == _hovering) return;
         _hovering = over;
         if (State == IslandState.Idle) return;
 
