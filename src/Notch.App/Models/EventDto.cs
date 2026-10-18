@@ -53,7 +53,7 @@ public sealed class EventDto
             Title: Clip(Title, 80),
             Subtitle: Clip(Subtitle ?? "", 140),
             Sticky: Sticky ?? stickyDefault,
-            TtlSeconds: Math.Clamp(Ttl ?? 4, 1, 120),
+            TtlSeconds: Math.Clamp(Ttl ?? 4, 1, 600),
             Actions: actions is { Count: > 0 } ? actions : null,
             Id: string.IsNullOrWhiteSpace(Id) ? null : Clip(Id, 80),
             HostPid: HostPid is > 0 ? HostPid : null);

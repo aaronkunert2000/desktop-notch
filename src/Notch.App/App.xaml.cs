@@ -24,6 +24,7 @@ public partial class App : Application
     private PeekService? _peek;
     private InboxService? _inbox;
     private ToastListenerService? _toasts;
+    private ClaudeDesktopWatcher? _claudeDiag;
     private EventResolver? _resolver;
     private IslandViewModel? _vm;
     private AppConfig _config = new();
@@ -129,6 +130,12 @@ public partial class App : Application
             _toasts = new ToastListenerService(resolver, config.WhatsAppPreview,
                 onRemoved: id => inbox.RemoveByKey("whatsapp", id));
             _ = _toasts.StartAsync();
+        }
+
+        if (config.ClaudeDiag)
+        {
+            _claudeDiag = new ClaudeDesktopWatcher();
+            _claudeDiag.Start();
         }
 
         try
@@ -307,6 +314,7 @@ public partial class App : Application
         _demo?.Stop();
         _peek?.Dispose();
         _toasts?.Dispose();
+        _claudeDiag?.Dispose();
         _tray?.Dispose();
         _hotkey?.Dispose();
         _media?.Dispose();

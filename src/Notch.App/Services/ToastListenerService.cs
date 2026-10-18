@@ -102,6 +102,7 @@ public sealed class ToastListenerService : IDisposable
         try
         {
             var app = n.AppInfo?.DisplayInfo?.DisplayName ?? "";
+            Log.Info($"Toast von: {(app.Length == 0 ? "?" : app)}");
             if (!app.Contains("WhatsApp", StringComparison.OrdinalIgnoreCase)) return;
 
             var texts = n.Notification?.Visual?

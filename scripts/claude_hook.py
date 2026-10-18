@@ -19,6 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from notch_send import load_token, request  # noqa: E402
 
 SOURCE = "claude-code"
+# running ist nicht dauerhaft: jeder Hook erneuert es; nach Abbruch (Esc) läuft es von selbst ab
+RUNNING_TTL = 300
+DONE_TTL = 10
 log = logging.getLogger("claude_hook")
 
 
@@ -36,15 +39,17 @@ def build(event: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
     base: dict[str, Any] = {"source": SOURCE, "id": session, "hostPid": os.getppid()}
 
     if name == "UserPromptSubmit":
-        return "/event", {**base, "kind": "running", "title": "Claude arbeitet", "subtitle": project}
+        return "/event", {**base, "kind": "running", "title": "Claude arbeitet", "subtitle": project,
+                       "sticky": False, "ttl": RUNNING_TTL}
     if name == "PreToolUse":
         tool = event.get("tool_name") or "Werkzeug"
-        return "/event", {**base, "kind": "running", "title": "Claude arbeitet", "subtitle": f"{project} · {tool}"}
+        return "/event", {**base, "kind": "running", "title": "Claude arbeitet", "subtitle": f"{project} · {tool}",
+                       "sticky": False, "ttl": RUNNING_TTL}
     if name == "Notification":
         message = event.get("message") or "Claude wartet auf dich"
         return "/event", {**base, "kind": "input_needed", "title": "Claude wartet", "subtitle": f"{project} · {message}"}
     if name == "Stop":
-        return "/event", {**base, "kind": "done", "title": "Claude fertig", "subtitle": project, "ttl": 5}
+        return "/event", {**base, "kind": "done", "title": "Claude fertig", "subtitle": project, "ttl": DONE_TTL}
     if name == "SessionEnd":
         return "/dismiss", base
     return None

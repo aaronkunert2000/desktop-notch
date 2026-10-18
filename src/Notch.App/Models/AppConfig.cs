@@ -34,6 +34,8 @@ public sealed class AppConfig
     public string VaultInbox { get; set; } = "";
     /// <summary>Was "Claude" startet: URI, Programm oder Verknüpfung.</summary>
     public string ClaudeCommand { get; set; } = "claude://";
+    /// <summary>Spike: Signale für "Claude Desktop arbeitet" ins Log schreiben (läuft 45 min, zeigt nichts an).</summary>
+    public bool ClaudeDiag { get; set; }
 
     /// <summary>
     /// Lädt die Config in Schichten; spätere überschreiben einzelne Werte der früheren:
