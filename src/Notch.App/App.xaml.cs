@@ -10,8 +10,11 @@ namespace Notch;
 
 public partial class App : Application
 {
+    private const string QuitEventName = @"Local\Notch.Quit";
+
     private Mutex? _mutex;
     private bool _ownsMutex;
+    private EventWaitHandle? _quitEvent;
     private DemoEventService? _demo;
     private EventServer? _server;
     private HotkeyService? _hotkey;
@@ -29,9 +32,26 @@ public partial class App : Application
         _mutex = new Mutex(true, @"Local\Notch.SingleInstance", out _ownsMutex);
         if (!_ownsMutex)
         {
+            // Zweiter Start = Umschalter (z. B. Ctrl+Alt+Shift+N): laufendes Notch beenden
+            try
+            {
+                using var quit = EventWaitHandle.OpenExisting(QuitEventName);
+                quit.Set();
+            }
+            catch (WaitHandleCannotBeOpenedException)
+            {
+                // ältere Version ohne Umschalter: einfach nichts tun
+            }
             Shutdown();
             return;
         }
+
+        _quitEvent = new EventWaitHandle(false, EventResetMode.AutoReset, QuitEventName);
+        ThreadPool.RegisterWaitForSingleObject(_quitEvent, (_, _) => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            Log.Info("Beendet per Umschalter (erneuter Start)");
+            Shutdown();
+        })), null, Timeout.Infinite, executeOnlyOnce: true);
 
         base.OnStartup(e);
 
@@ -224,6 +244,7 @@ public partial class App : Application
         _hotkey?.Dispose();
         _media?.Dispose();
         _server?.Dispose();
+        _quitEvent?.Dispose();
         if (_ownsMutex) _mutex?.ReleaseMutex();
         _mutex?.Dispose();
         base.OnExit(e);

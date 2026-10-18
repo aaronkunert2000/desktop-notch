@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.Win32;
 
 namespace Notch.Services;
@@ -7,6 +8,7 @@ public static class Autostart
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Notch";
+    private static readonly string OptOutFile = Path.Combine(Log.Dir, "autostart-off");
 
     public static bool IsEnabled()
     {
@@ -23,11 +25,15 @@ public static class Autostart
             {
                 var exe = Environment.ProcessPath ?? throw new InvalidOperationException("ProcessPath unbekannt");
                 key.SetValue(ValueName, $"\"{exe}\"");
+                if (File.Exists(OptOutFile)) File.Delete(OptOutFile);
                 Log.Info($"Autostart an: {exe}");
             }
             else
             {
                 key.DeleteValue(ValueName, throwOnMissingValue: false);
+                // Merker für update-notch.ps1: Autostart nicht wieder einschalten
+                Directory.CreateDirectory(Log.Dir);
+                File.WriteAllText(OptOutFile, "Autostart im Tray ausgeschaltet");
                 Log.Info("Autostart aus");
             }
         }

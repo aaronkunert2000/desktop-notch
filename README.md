@@ -20,6 +20,8 @@ Eine Dynamic Island für Windows: eine schwarze Insel oben mittig auf dem Bildsc
 - **`Ctrl+Alt+N`:** Ist nichts zu sehen → Quick Actions (Fokus-Timer, Neue Notiz, Claude). Ist etwas zu sehen → alles ausblenden.
 - **Maus oben mittig an den Rand:** Uhrzeit, beim Drüberfahren Quick Actions.
 - **Tray-Icon:** Linksklick wie der Hotkey. Rechtsklick: Nicht stören, Timer, Test-Event, Log, Autostart, Beenden.
+- **`Ctrl+Alt+Shift+N`:** Notch komplett an/aus (Startmenü-Verknüpfung, wird von `update-notch.ps1` angelegt). Ein erneuter Start der exe beendet ein laufendes Notch.
+- **Autostart:** startet bei der Windows-Anmeldung. Abschalten im Tray („Mit Windows starten"), das bleibt dann auch nach Updates aus.
 
 ## Download (ohne Entwicklungsumgebung)
 

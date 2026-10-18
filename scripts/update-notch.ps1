@@ -53,12 +53,28 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# 3. Austauschen und neu starten
-Stop-Process -Name Notch -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 800
+# 3. Austauschen
+Get-Process -Name Notch -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+# Warten, bis es wirklich beendet ist: ein zweiter Start wuerde sonst als Aus-Schalter wirken
+Get-Process -Name Notch -ErrorAction SilentlyContinue | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $target | Out-Null
 Copy-Item -Path (Join-Path $build '*') -Destination $target -Recurse -Force
-Start-Process -FilePath (Join-Path $target 'Notch.exe')
+$exe = Join-Path $target 'Notch.exe'
+
+# 4. Autostart bei der Anmeldung (ausser im Tray bewusst ausgeschaltet)
+if (-not (Test-Path (Join-Path $env:APPDATA 'Notch\autostart-off'))) {
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Notch' -Value "`"$exe`""
+}
+
+# 5. Startmenue-Verknuepfung: Ctrl+Alt+Shift+N schaltet das Notch an und aus
+$lnk = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Notch.lnk'))
+$lnk.TargetPath       = $exe
+$lnk.WorkingDirectory = $target
+$lnk.Hotkey           = 'CTRL+ALT+SHIFT+N'
+$lnk.Description      = 'Desktop Notch an/aus'
+$lnk.Save()
+
+Start-Process -FilePath $exe
 Start-Sleep -Seconds 3
 
 $commit = git log -1 --pretty=%s
