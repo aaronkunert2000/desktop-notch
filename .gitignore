@@ -5,3 +5,5 @@ obj/
 .env
 test-results/
 __pycache__/
+settings-backup.json
+dist/
