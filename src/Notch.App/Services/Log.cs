@@ -9,8 +9,11 @@ public static class Log
     private const long MaxBytes = 1_000_000;
     private static readonly object Gate = new();
 
+    /// <summary>Datenordner: %APPDATA%\Notch, oder NOTCH_DATA_DIR (z. B. für Tests, damit die echte Ablage unberührt bleibt).</summary>
     public static string Dir { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Notch");
+        Environment.GetEnvironmentVariable("NOTCH_DATA_DIR") is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Notch");
 
     private static readonly string FilePath = Path.Combine(Dir, "notch.log");
 

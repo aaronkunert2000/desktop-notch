@@ -58,6 +58,28 @@
         </Setter>
     </Style>
 
+    <!-- Zeile in der Ablage: ganze Breite klickbar, dezenter Hover -->
+    <Style x:Key="RowButton" TargetType="Button">
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ButtonBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Runder Icon-Button (Mediensteuerung) -->
     <Style x:Key="IconButton" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>

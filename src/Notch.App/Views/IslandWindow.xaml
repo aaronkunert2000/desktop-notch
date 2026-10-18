@@ -19,7 +19,7 @@
         <Border x:Name="Island"
                 Width="90" Height="8" CornerRadius="4" Opacity="0" IsHitTestVisible="False"
                 Background="{StaticResource IslandBrush}" Cursor="Hand"
-                MouseEnter="OnIslandEnter" MouseLeave="OnIslandLeave"
+                MouseEnter="OnIslandEnter" MouseLeave="OnIslandLeave" MouseWheel="OnIslandWheel"
                 MouseLeftButtonUp="OnIslandClick">
 
             <Border.Effect>
@@ -100,6 +100,19 @@
                                 Click="OnMediaClick" FontSize="18"/>
                         <Button Style="{StaticResource IconButton}" Content="&#xE893;" Tag="next" Click="OnMediaClick"/>
                     </StackPanel>
+
+                    <!-- Ablage: alle gelesen -->
+                    <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE73E;" Margin="8,0,0,0"
+                            ToolTip="Alle gelesen" Click="OnReadAllClick" VerticalAlignment="Center"
+                            Visibility="{Binding ShowInboxList, Converter={StaticResource B2V}}"/>
+
+                    <!-- Kompakt: Anzahl Seiten -->
+                    <Border Grid.Column="2" Background="{StaticResource ButtonBrush}" CornerRadius="8"
+                            Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                            Visibility="{Binding ShowBadge, Converter={StaticResource B2V}}">
+                        <TextBlock Text="{Binding PageBadge}" FontFamily="{StaticResource UiFont}" FontSize="11"
+                                   FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </Border>
                 </Grid>
 
                 <!-- Aktionen (nur Large) -->
@@ -121,6 +134,66 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Button.Style>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Ablage: ungelesene Benachrichtigungen (nur Large) -->
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding InboxRows}" VerticalAlignment="Top"
+                              Margin="0,-6,0,0"
+                              Visibility="{Binding ShowInboxList, Converter={StaticResource B2V}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource RowButton}" Tag="{Binding Uid}" Click="OnInboxItemClick">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="36"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                               Foreground="{Binding Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Text}" FontFamily="{StaticResource UiFont}"
+                                               FontSize="12.5" Foreground="{StaticResource TextPrimaryBrush}"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Time}" FontFamily="{StaticResource UiFont}"
+                                               FontSize="11.5" Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="10,0,4,0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Seiten-Punkte unten mittig (nur aufgeklappt, ab 2 Seiten) -->
+                <ItemsControl Grid.Row="0" Grid.RowSpan="2" ItemsSource="{Binding PageDots}"
+                              HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,3"
+                              Visibility="{Binding ShowDots, Converter={StaticResource B2V}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Tag="{Binding Index}" Click="OnDotClick" Cursor="Hand" Focusable="False"
+                                    Width="14" Height="14">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="Transparent">
+                                            <Ellipse x:Name="Dot" Width="6" Height="6" Fill="#59FFFFFF"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Active}" Value="True">
+                                                <Setter TargetName="Dot" Property="Fill" Value="White"/>
+                                            </DataTrigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Dot" Property="Width" Value="7"/>
+                                                <Setter TargetName="Dot" Property="Height" Value="7"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
                             </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

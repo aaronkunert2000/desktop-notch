@@ -18,6 +18,7 @@ public sealed class ToastListenerService : IDisposable
 
     private readonly EventResolver _resolver;
     private readonly bool _preview;
+    private readonly Action<string>? _onRemoved;
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly HashSet<uint> _seen = new();
     private UserNotificationListener? _listener;
@@ -25,10 +26,11 @@ public sealed class ToastListenerService : IDisposable
     private bool _busy;
     private int _errors;
 
-    public ToastListenerService(EventResolver resolver, bool preview)
+    public ToastListenerService(EventResolver resolver, bool preview, Action<string>? onRemoved = null)
     {
         _resolver = resolver;
         _preview = preview;
+        _onRemoved = onRemoved;
         _poll.Tick += async (_, _) => await PollAsync();
     }
 
@@ -70,6 +72,11 @@ public sealed class ToastListenerService : IDisposable
                 if (!_seen.Add(n.Id) || !_primed) continue;   // beim Start: vorhandene nicht erneut zeigen
                 TryShow(n);
             }
+
+            // Aus Windows verschwunden (in der App gelesen oder weggeklickt)
+            if (_primed && _onRemoved is not null)
+                foreach (var gone in _seen.Where(id => !current.Contains(id)).ToList())
+                    _onRemoved(gone.ToString());
 
             _seen.IntersectWith(current);   // nur IDs merken, die noch im Benachrichtigungscenter liegen
             _primed = true;

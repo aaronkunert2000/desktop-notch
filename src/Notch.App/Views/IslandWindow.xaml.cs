@@ -175,6 +175,24 @@ public partial class IslandWindow : Window
         if (sender is Button { Tag: string id }) _vm.InvokeAction(id);
     }
 
+    private void OnIslandWheel(object sender, MouseWheelEventArgs e)
+    {
+        _vm.Browse(e.Delta < 0 ? 1 : -1);
+        e.Handled = true;
+    }
+
+    private void OnDotClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: int index }) _vm.BrowseTo(index);
+    }
+
+    private void OnInboxItemClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string uid }) _vm.OpenInboxItem(uid);
+    }
+
+    private void OnReadAllClick(object sender, RoutedEventArgs e) => _vm.ReadAllInbox();
+
     private void OnMediaClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string command }) _vm.InvokeMedia(command);

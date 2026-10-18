@@ -22,6 +22,7 @@ public partial class App : Application
     private MediaService? _media;
     private TimerService? _timer;
     private PeekService? _peek;
+    private InboxService? _inbox;
     private ToastListenerService? _toasts;
     private EventResolver? _resolver;
     private IslandViewModel? _vm;
@@ -64,6 +65,18 @@ public partial class App : Application
         var config = _config = AppConfig.Load();
         var vm = _vm = new IslandViewModel();
         var resolver = _resolver = new EventResolver(vm);
+        var inbox = _inbox = new InboxService();
+
+        // Ablage + Seiten: jedes Event wird für die Ablage erfasst, jede Änderung aktualisiert die Punkte
+        vm.PageProvider = BuildPages;
+        vm.InboxProvider = () => inbox.Items;
+        resolver.Submitted += inbox.Track;
+        resolver.Changed += vm.RefreshPages;
+        inbox.Changed += OnInboxChanged;
+        vm.Acknowledged += ev => inbox.RemoveByKey(ev.Source, ev.Id);
+        vm.DismissRequested += ev => resolver.Dismiss(ev.Source, ev.Id);
+        vm.InboxItemOpened += OpenInboxItem;
+        vm.InboxReadAll += inbox.Clear;
         var window = new IslandWindow(vm);
         window.Show();
 
@@ -112,7 +125,9 @@ public partial class App : Application
 
         if (config.WhatsApp)
         {
-            _toasts = new ToastListenerService(resolver, config.WhatsAppPreview);
+            // In WhatsApp gelesen = Windows-Benachrichtigung weg = in der Ablage gelesen
+            _toasts = new ToastListenerService(resolver, config.WhatsAppPreview,
+                onRemoved: id => inbox.RemoveByKey("whatsapp", id));
             _ = _toasts.StartAsync();
         }
 
@@ -149,14 +164,62 @@ public partial class App : Application
             return;
         }
 
-        _resolver.Submit(new NotchEvent("notch", EventKind.Info, "Quick Actions", _config.Hotkey,
-            TtlSeconds: 8, Actions: BuildQuickActions(), Id: "quick", OpenLarge: true));
+        // Ungelesenes zuerst; Quick Actions sind dann die nächste Seite
+        _resolver.Submit(_inbox is { Count: > 0 } ? _inbox.CreateEvent(8) : QuickEvent());
+    }
+
+    private NotchEvent QuickEvent() =>
+        new("notch", EventKind.Info, "Quick Actions", _config.Hotkey,
+            TtlSeconds: 8, Actions: BuildQuickActions(), Id: "quick", OpenLarge: true);
+
+    /// <summary>Seiten für die Punkte: aktive Vorgänge, Ablage (falls ungelesen), ggf. Quick Actions.</summary>
+    private IReadOnlyList<NotchEvent> BuildPages()
+    {
+        if (_resolver is null || _inbox is null) return Array.Empty<NotchEvent>();
+
+        var pages = _resolver.LivePages().ToList();
+        if (_inbox.Count > 0 && !pages.Any(InboxService.IsInboxEvent)) pages.Add(_inbox.CreateEvent(8));
+        if (InboxService.IsInboxEvent(_resolver.Current) && !pages.Any(p => p is { Source: "notch", Id: "quick" }))
+            pages.Add(QuickEvent());
+
+        return pages.OrderByDescending(PagePriority).ToList();
+    }
+
+    private static double PagePriority(NotchEvent e) =>
+        InboxService.IsInboxEvent(e) ? 2.5
+        : e is { Source: "notch", Id: "quick" or "peek" } ? -1
+        : EventResolver.Priority(e.Kind);
+
+    private void OnInboxChanged()
+    {
+        _vm?.RefreshInbox();
+        _vm?.RefreshPages();
+        // Alles gelesen: Ablage-Seite schließen, falls sie gerade die Vorgabe ist
+        if (_inbox is { Count: 0 } && InboxService.IsInboxEvent(_resolver?.Current))
+            _resolver?.Dismiss("notch", "inbox");
+    }
+
+    /// <summary>Eintrag aus der Ablage: als gelesen entfernen und die Quelle öffnen.</summary>
+    private void OpenInboxItem(string uid)
+    {
+        var item = _inbox?.Take(uid);
+        if (item is null) return;
+
+        if (item.HostPid is int pid && WindowFocus.FocusProcessWindow(pid)) return;
+        if (item.Source == "claude-code") FocusClaude();
+        else if (item.Open is not null) Launch(item.Open);
     }
 
     /// <summary>Maus oben mittig am Rand: Uhrzeit, beim Drüberfahren Quick Actions.</summary>
     private void OnPeek()
     {
         if (_vm is null || _resolver is null || _vm.State != IslandState.Idle) return;
+
+        if (_inbox is { Count: > 0 })
+        {
+            _resolver.Submit(_inbox.CreateEvent(4));   // Ungelesenes statt Uhrzeit
+            return;
+        }
 
         var now = DateTime.Now;
         var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");

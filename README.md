@@ -13,12 +13,16 @@ Eine Dynamic Island für Windows: eine schwarze Insel oben mittig auf dem Bildsc
 | Fokus-Timer | 25 min Fokus + 5 min Pause mit Live-Countdown |
 | Eigene Skripte | beliebige Events über `scripts/notch_send.py` |
 
+**Ablage:** Abgeschlossene Meldungen (WhatsApp, Claude fertig/wartet, Pipeline, Timer-Ende) bleiben gespeichert, bis du sie liest: per Klick in der Insel, „Alle gelesen", in WhatsApp selbst oder wenn Claude in derselben Session weitermacht. Die Ablage übersteht Neustarts (`%APPDATA%\Notch\inbox.json`).
+
+**Seiten:** Laufen mehrere Dinge gleichzeitig (Musik, Timer, Claude, Ablage), zeigt die aufgeklappte Insel unten Punkte. Wechseln per Klick auf einen Punkt oder Mausrad; nach 8 s ohne Bedienung zurück zur wichtigsten Seite. Kompakt zeigt eine kleine Zahl, wie viele Seiten es gibt.
+
 **Prioritäten:** Freigaben und Fehler werden nie verdrängt. Musik und Timer laufen im Hintergrund und kommen nach anderen Meldungen zurück. Kurze Meldungen verschwinden nach ein paar Sekunden.
 
 ## Bedienung
 
-- **`Ctrl+Alt+N`:** Ist nichts zu sehen → Quick Actions (Fokus-Timer, Neue Notiz, Claude). Ist etwas zu sehen → alles ausblenden.
-- **Maus oben mittig an den Rand:** Uhrzeit, beim Drüberfahren Quick Actions.
+- **`Ctrl+Alt+N`:** Ist nichts zu sehen → Ablage (falls Ungelesenes) bzw. Quick Actions (Fokus-Timer, Neue Notiz, Claude). Ist etwas zu sehen → alles ausblenden.
+- **Maus oben mittig an den Rand:** Ungelesenes aus der Ablage, sonst Uhrzeit; beim Drüberfahren Quick Actions.
 - **Tray-Icon:** Linksklick wie der Hotkey. Rechtsklick: Nicht stören, Timer, Test-Event, Log, Autostart, Beenden.
 - **`Ctrl+Alt+Shift+N`:** Notch komplett an/aus (Startmenü-Verknüpfung, wird von `update-notch.ps1` angelegt). Ein erneuter Start der exe beendet ein laufendes Notch.
 - **Autostart:** startet bei der Windows-Anmeldung. Abschalten im Tray („Mit Windows starten"), das bleibt dann auch nach Updates aus.
@@ -93,6 +97,6 @@ src/Notch.App/
 scripts/
 ├─ notch_send.py      Client für eigene Skripte
 ├─ claude_hook.py     Claude-Code-Hook
-├─ test-notch.ps1     Smoke-Test mit Screenshots → test-results/
+├─ test-notch.ps1     Smoke-Test mit Screenshots → test-results/ (Doppelklick: test.cmd)
 └─ update-notch.ps1   Pull + Build + Neustart
 ```

@@ -43,11 +43,14 @@ def load_token() -> str | None:
     env = os.environ.get("NOTCH_TOKEN")
     if env:
         return env.strip()
-    appdata = os.environ.get("APPDATA")
-    if not appdata:
-        return None
+    data_dir = os.environ.get("NOTCH_DATA_DIR")
+    if not data_dir:
+        appdata = os.environ.get("APPDATA")
+        if not appdata:
+            return None
+        data_dir = str(Path(appdata) / "Notch")
     try:
-        return (Path(appdata) / "Notch" / "token").read_text(encoding="utf-8").strip()
+        return (Path(data_dir) / "token").read_text(encoding="utf-8").strip()
     except OSError:
         return None
 

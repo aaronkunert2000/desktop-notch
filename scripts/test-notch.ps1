@@ -10,8 +10,12 @@ $send = Join-Path $root 'scripts\notch_send.py'
 $hook = Join-Path $root 'scripts\claude_hook.py'
 
 New-Item -ItemType Directory -Force -Path $out | Out-Null
-Get-ChildItem -Path $out -File | Remove-Item -Force
+Get-ChildItem -Path $out | Remove-Item -Recurse -Force
 $summary = Join-Path $out 'summary.txt'
+
+# Eigener Datenordner fuer den Test: echte Ablage, Token und Log bleiben unberuehrt
+$env:NOTCH_DATA_DIR = Join-Path $out 'data'
+New-Item -ItemType Directory -Force -Path $env:NOTCH_DATA_DIR | Out-Null
 
 function Step([string]$msg) {
     $line = "$(Get-Date -Format 'HH:mm:ss') $msg"
@@ -41,9 +45,10 @@ function Shot([string]$name) {
     Step "Screenshot $name.png"
 }
 
-# 1. Alte Instanz beenden, bauen
-Stop-Process -Name Notch -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 600
+# 1. Installiertes Notch merken und beenden (wird am Ende wieder gestartet), bauen
+$installed = Get-Process -Name Notch -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Path
+Get-Process -Name Notch -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name Notch -ErrorAction SilentlyContinue | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 Step 'Build ...'
 dotnet build (Join-Path $root 'src\Notch.App') -c Debug *> (Join-Path $out 'build.txt')
 if ($LASTEXITCODE -ne 0) { Step 'BUILD FEHLGESCHLAGEN - siehe build.txt'; exit 1 }
@@ -95,20 +100,60 @@ Start-Sleep -Milliseconds 1200; Shot '09-hook-done'
 
 Start-Sleep -Seconds 6; Shot '10-idle'
 
-# Maus-Reveal: Zeiger oben mittig an den Rand, dann auf die Insel (Maus waehrenddessen nicht bewegen)
-Add-Type -Namespace Native -Name Cursor -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);'
+# Maus und Tastatur simulieren (Maus waehrenddessen nicht bewegen)
+Add-Type -Namespace Native -Name Input -MemberDefinition @'
+[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+[DllImport("user32.dll")] public static extern void mouse_event(uint flags, int dx, int dy, int data, System.IntPtr extra);
+[DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, System.IntPtr extra);
+'@
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
 $cx = $screen.X + [int]($screen.Width / 2)
 $orig = [System.Windows.Forms.Cursor]::Position
-[Native.Cursor]::SetCursorPos($cx, $screen.Y) | Out-Null
-Start-Sleep -Milliseconds 800; Shot '11-peek-uhrzeit'
-[Native.Cursor]::SetCursorPos($cx, $screen.Y + 30) | Out-Null
-Start-Sleep -Milliseconds 900; Shot '12-peek-hover-quick-actions'
-[Native.Cursor]::SetCursorPos($orig.X, [Math]::Max($orig.Y, $screen.Y + 400)) | Out-Null
-Start-Sleep -Seconds 4; Shot '13-peek-weg'
+function MoveTo([int]$y) { [Native.Input]::SetCursorPos($cx, $screen.Y + $y) | Out-Null }
+function MoveAway { [Native.Input]::SetCursorPos($orig.X, [Math]::Max($orig.Y, $screen.Y + 400)) | Out-Null }
+function WheelDown { [Native.Input]::mouse_event(0x0800, 0, 0, -120, [IntPtr]::Zero) }
+function Hotkey {   # Ctrl+Alt+N
+    [Native.Input]::keybd_event(0x11, 0, 0, [IntPtr]::Zero); [Native.Input]::keybd_event(0x12, 0, 0, [IntPtr]::Zero)
+    [Native.Input]::keybd_event(0x4E, 0, 0, [IntPtr]::Zero); [Native.Input]::keybd_event(0x4E, 0, 2, [IntPtr]::Zero)
+    [Native.Input]::keybd_event(0x12, 0, 2, [IntPtr]::Zero); [Native.Input]::keybd_event(0x11, 0, 2, [IntPtr]::Zero)
+}
 
-# 4. Abschluss
-$log = Join-Path $env:APPDATA 'Notch\notch.log'
-if (Test-Path $log) { Copy-Item $log (Join-Path $out 'notch.log') }
+# 4. Ablage: Fehler-Test und Claude fertig sind ungelesen -> Maus-Reveal zeigt die Ablage statt der Uhrzeit
+MoveTo 0
+Start-Sleep -Milliseconds 900; Shot '11-peek-ablage'
+MoveTo 30
+Start-Sleep -Milliseconds 900; Shot '12-ablage-hover'
+WheelDown
+Start-Sleep -Milliseconds 900; Shot '13-mausrad-quick-actions'
+MoveAway
+Start-Sleep -Seconds 13; Shot '14-weg'   # 8 s Rueckkehr + 4 s Anzeigedauer
+
+# 5. Hotkey: oeffnet die Ablage, zweites Druecken blendet aus
+Hotkey
+Start-Sleep -Milliseconds 1200; Shot '15-hotkey-ablage'
+Hotkey
+Start-Sleep -Milliseconds 1200; Shot '16-hotkey-aus'
+
+# 6. Seiten-Punkte: laufender Vorgang + Timer + Ablage = 3 Seiten
+Send --source build --kind running --title 'Build laeuft' --subtitle 'Seiten-Test'
+Send --source test --id t2 --kind timer --title 'Fokus 12:00' --subtitle 'Seiten-Test' --sticky
+Start-Sleep -Milliseconds 1200; Shot '17-kompakt-badge'
+MoveTo 30
+Start-Sleep -Milliseconds 900; Shot '18-hover-punkte'
+WheelDown
+Start-Sleep -Milliseconds 900; Shot '19-seite-2'
+WheelDown
+Start-Sleep -Milliseconds 900; Shot '20-seite-3'
+MoveAway
+Start-Sleep -Seconds 10; Shot '21-zurueck-zur-vorgabe'
+Send --source build --dismiss
+Send --source test --id t2 --dismiss
+
+# 7. Abschluss
+Copy-Item (Join-Path $env:NOTCH_DATA_DIR 'notch.log') (Join-Path $out 'notch.log') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $env:NOTCH_DATA_DIR 'inbox.json') (Join-Path $out 'inbox.json') -ErrorAction SilentlyContinue
 Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue
+Wait-Process -Id $proc.Id -Timeout 10 -ErrorAction SilentlyContinue
+Remove-Item Env:\NOTCH_DATA_DIR
+if ($installed) { Start-Process -FilePath $installed; Step "Installiertes Notch wieder gestartet: $installed" }
 Step 'Fertig. Ergebnisse in test-results\'

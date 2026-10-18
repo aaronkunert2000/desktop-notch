@@ -47,11 +47,38 @@ public sealed class EventResolver
 
     public bool TryGetHostPid(string source, out int pid) => _hostPids.TryGetValue(source, out pid);
 
+    /// <summary>Jedes eingehende Event, vor allen Filtern (auch "Nicht stören"): für die Ablage.</summary>
+    public event Action<NotchEvent>? Submitted;
+
+    /// <summary>Angezeigtes Event oder Warteschlange haben sich geändert (für die Seiten-Punkte).</summary>
+    public event Action? Changed;
+
+    public NotchEvent? Current => _current;
+
+    /// <summary>Alle aktiven Vorgänge: aktuelles Event plus Warteschlange (ohne ausgeblendete).</summary>
+    public IReadOnlyList<NotchEvent> LivePages()
+    {
+        var now = DateTime.UtcNow;
+        var list = new List<NotchEvent>();
+        if (_current is not null) list.Add(_current);
+        foreach (var (ev, at) in _queue)
+        {
+            if (!ev.Sticky && now - at > QueueExpiry) continue;
+            if (list.All(x => Key(x) != Key(ev))) list.Add(ev);
+        }
+        return list;
+    }
+
     /// <summary>
     /// Hotkey "Anzeige zu": alles ausblenden. Dauerhafte Vorgänge werden geparkt und erscheinen erst
     /// wieder, wenn sich bei ihnen etwas ändert (anderer Zustand oder neuer Song).
     /// </summary>
     public void HideAll()
+    {
+        try { HideAllCore(); } finally { Changed?.Invoke(); }
+    }
+
+    private void HideAllCore()
     {
         if (_current is { Sticky: true }) _parked[Key(_current)] = _current;
         foreach (var q in _queue.Where(q => q.Event.Sticky)) _parked[Key(q.Event)] = q.Event;
@@ -61,6 +88,12 @@ public sealed class EventResolver
     }
 
     public void Submit(NotchEvent e)
+    {
+        Submitted?.Invoke(e);
+        try { SubmitCore(e); } finally { Changed?.Invoke(); }
+    }
+
+    private void SubmitCore(NotchEvent e)
     {
         if (e.HostPid is int pid) _hostPids[e.Source] = pid;
         // Vom Nutzer ausgelöste Anzeigen (source "notch") ignorieren "Nicht stören"
@@ -116,6 +149,11 @@ public sealed class EventResolver
     /// <summary>Ohne source: aktuelles Event beenden. Mit source (optional id): passende Events entfernen.</summary>
     public void Dismiss(string? source, string? id)
     {
+        try { DismissCore(source, id); } finally { Changed?.Invoke(); }
+    }
+
+    private void DismissCore(string? source, string? id)
+    {
         if (string.IsNullOrWhiteSpace(source))
         {
             if (_current is not null) _vm.Complete();
@@ -139,6 +177,7 @@ public sealed class EventResolver
     {
         _current = null;
         ShowNext();
+        Changed?.Invoke();
     }
 
     private void ShowNext()
@@ -167,6 +206,8 @@ public sealed class EventResolver
     {
         if (_results.Count >= MaxResults) _results.Remove(_results.Keys.First());
         _results[Key(e)] = action;
+        // Beim Blättern beantwortet: wartendes Event ist damit erledigt
+        _queue.RemoveAll(q => Key(q.Event) == Key(e));
         Log.Info($"Aktion {e.Source}/{e.Id ?? "-"}: {action}");
     }
 
