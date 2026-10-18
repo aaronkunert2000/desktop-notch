@@ -58,6 +58,11 @@ public sealed class InboxService
         if (_items.RemoveAll(i => i.Source == source && i.EventId == eventId) > 0) Commit();
     }
 
+    public void RemoveBySource(string source)
+    {
+        if (_items.RemoveAll(i => i.Source == source) > 0) Commit();
+    }
+
     public void Clear()
     {
         if (_items.Count == 0) return;

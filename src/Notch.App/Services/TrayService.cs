@@ -12,6 +12,9 @@ public sealed record TrayActions(
     Action ToggleIsland,
     Action TestEvent,
     Action OpenLog,
+    Func<bool> IsGmailConnected,
+    Action GmailConnect,
+    Action GmailDisconnect,
     Action Exit);
 
 /// <summary>Tray-Icon mit Menü. Linksklick = Insel/Quick Actions wie der Hotkey.</summary>
@@ -29,10 +32,14 @@ public sealed class TrayService : IDisposable
         var dnd = new Forms.ToolStripMenuItem("Nicht stören");
         var timer = new Forms.ToolStripMenuItem("Fokus-Timer starten");
         var autostart = new Forms.ToolStripMenuItem("Mit Windows starten");
+        var gmail = new Forms.ToolStripMenuItem("Gmail verbinden …");
+        var gmailOff = new Forms.ToolStripMenuItem("Gmail trennen");
 
         dnd.Click += (_, _) => actions.ToggleDoNotDisturb();
         timer.Click += (_, _) => actions.ToggleTimer();
         autostart.Click += (_, _) => Autostart.Set(!Autostart.IsEnabled());
+        gmail.Click += (_, _) => actions.GmailConnect();
+        gmailOff.Click += (_, _) => actions.GmailDisconnect();
 
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(dnd);
@@ -40,6 +47,8 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Test-Event", null, (_, _) => actions.TestEvent());
         menu.Items.Add("Log öffnen", null, (_, _) => actions.OpenLog());
+        menu.Items.Add(gmail);
+        menu.Items.Add(gmailOff);
         menu.Items.Add(autostart);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Beenden", null, (_, _) => actions.Exit());
@@ -50,6 +59,9 @@ public sealed class TrayService : IDisposable
             dnd.Checked = actions.IsDoNotDisturb();
             timer.Text = actions.IsTimerRunning() ? "Fokus-Timer stoppen" : "Fokus-Timer starten";
             autostart.Checked = Autostart.IsEnabled();
+            var connected = actions.IsGmailConnected();
+            gmail.Text = connected ? "Gmail neu verbinden …" : "Gmail verbinden …";
+            gmailOff.Visible = connected;
         };
 
         _icon = new Forms.NotifyIcon

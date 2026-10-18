@@ -28,6 +28,8 @@ public sealed class AppConfig
     public bool WhatsApp { get; set; } = true;
     /// <summary>Nachrichtentext anzeigen; false = nur Absender + "Neue Nachricht".</summary>
     public bool WhatsAppPreview { get; set; } = true;
+    /// <summary>Gmail-Pop-ups (IMAP); aktiv erst, wenn im Tray ein App-Passwort hinterlegt ist.</summary>
+    public bool Gmail { get; set; } = true;
     public int FocusMinutes { get; set; } = 25;
     public int BreakMinutes { get; set; } = 5;
     /// <summary>Ordner für Quick Action "Neue Notiz" (leer = Aktion ausgeblendet).</summary>

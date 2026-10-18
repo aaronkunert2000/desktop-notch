@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.8.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\config.json" Link="config.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Persönliche Werte (nicht im Repo): nur mitkopieren, wenn vorhanden -->
     <None Include="..\..\config.local.json" Link="config.local.json" CopyToOutputDirectory="PreserveNewest"

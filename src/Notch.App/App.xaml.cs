@@ -25,6 +25,7 @@ public partial class App : Application
     private InboxService? _inbox;
     private ToastListenerService? _toasts;
     private ClaudeDesktopWatcher? _claudeDiag;
+    private GmailService? _gmail;
     private EventResolver? _resolver;
     private IslandViewModel? _vm;
     private AppConfig _config = new();
@@ -115,6 +116,16 @@ public partial class App : Application
             TestEvent: () => resolver.Submit(new NotchEvent("notch", EventKind.Done,
                 "Test-Event", "Tray · alles ok", Id: "test")),
             OpenLog: () => Launch(Path.Combine(Log.Dir, "notch.log")),
+            IsGmailConnected: () => GmailCredentials.Exists,
+            GmailConnect: ConnectGmail,
+            GmailDisconnect: () =>
+            {
+                _gmail?.Stop();
+                GmailCredentials.Delete();
+                inbox.RemoveBySource("gmail");
+                resolver.Dismiss("gmail", null);
+                Log.Info("Gmail getrennt");
+            },
             Exit: Shutdown));
 
         if (config.Spotify)
@@ -130,6 +141,12 @@ public partial class App : Application
             _toasts = new ToastListenerService(resolver, config.WhatsAppPreview,
                 onRemoved: id => inbox.RemoveByKey("whatsapp", id));
             _ = _toasts.StartAsync();
+        }
+
+        if (config.Gmail)
+        {
+            _gmail = new GmailService(resolver, Dispatcher);
+            _gmail.Start();   // tut nichts ohne gespeichertes App-Passwort
         }
 
         if (config.ClaudeDiag)
@@ -179,6 +196,20 @@ public partial class App : Application
     }
 
     /// <summary>Standard-Ansicht: Uhrzeit, Datum, Quick Actions. Immer als letzte Seite erreichbar.</summary>
+    private void ConnectGmail()
+    {
+        var current = GmailCredentials.Load()?.User;
+        using var dialog = new GmailSetupDialog(current);
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        if (dialog.User.Length == 0 || dialog.Password.Length == 0) return;
+
+        GmailCredentials.Save(dialog.User, dialog.Password);
+        _gmail ??= new GmailService(_resolver!, Dispatcher);
+        _gmail.Start();
+        _resolver!.Submit(new NotchEvent("notch", EventKind.Info, "Gmail verbunden",
+            dialog.User, Id: "gmail-setup", TtlSeconds: 4));
+    }
+
     private NotchEvent StandardEvent(int ttlSeconds, bool openLarge)
     {
         var now = DateTime.Now;
@@ -314,6 +345,7 @@ public partial class App : Application
         _demo?.Stop();
         _peek?.Dispose();
         _toasts?.Dispose();
+        _gmail?.Dispose();
         _claudeDiag?.Dispose();
         _tray?.Dispose();
         _hotkey?.Dispose();
