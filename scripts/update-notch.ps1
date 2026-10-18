@@ -25,7 +25,7 @@ Set-Location $root
 
 # 1. Aenderungen holen (nur wenn lokal nichts Uncommittetes liegt)
 if (-not $NoPull) {
-    $dirty = git status --porcelain
+    $dirty = git status --porcelain --untracked-files=no
     if ($dirty) {
         Write-Host 'Lokale, nicht committete Aenderungen - Update abgebrochen:'
         $dirty | Write-Host
