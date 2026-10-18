@@ -15,13 +15,13 @@ Eine Dynamic Island für Windows: eine schwarze Insel oben mittig auf dem Bildsc
 
 **Ablage:** Abgeschlossene Meldungen (WhatsApp, Claude fertig/wartet, Pipeline, Timer-Ende) bleiben gespeichert, bis du sie liest: per Klick in der Insel, „Alle gelesen", in WhatsApp selbst oder wenn Claude in derselben Session weitermacht. Die Ablage übersteht Neustarts (`%APPDATA%\Notch\inbox.json`).
 
-**Seiten:** Laufen mehrere Dinge gleichzeitig (Musik, Timer, Claude, Ablage), zeigt die aufgeklappte Insel unten Punkte. Wechseln per Klick auf einen Punkt oder Mausrad; nach 8 s ohne Bedienung zurück zur wichtigsten Seite. Kompakt zeigt eine kleine Zahl, wie viele Seiten es gibt.
+**Seiten:** Laufen mehrere Dinge gleichzeitig (Musik, Timer, Claude, Ablage), zeigt die aufgeklappte Insel unten Punkte. Die Uhr-Ansicht mit Quick Actions ist immer die letzte Seite. Wechseln per Klick auf einen Punkt oder Mausrad; nach 8 s ohne Bedienung zurück zur wichtigsten Seite. Kompakt zeigt eine kleine Zahl, wie viele Seiten es gibt.
 
 **Prioritäten:** Freigaben und Fehler werden nie verdrängt. Musik und Timer laufen im Hintergrund und kommen nach anderen Meldungen zurück. Kurze Meldungen verschwinden nach ein paar Sekunden.
 
 ## Bedienung
 
-- **`Ctrl+Alt+N`:** Ist nichts zu sehen → Ablage (falls Ungelesenes) bzw. Quick Actions (Fokus-Timer, Neue Notiz, Claude). Ist etwas zu sehen → alles ausblenden.
+- **`Ctrl+Alt+N`:** Ist etwas zu sehen → alles ausblenden. Ist nichts zu sehen → ausgeblendete Musik/Timer zurückholen, sonst Ablage (falls Ungelesenes) bzw. Uhr mit Quick Actions (Fokus-Timer, Neue Notiz, Claude).
 - **Maus oben mittig an den Rand:** Ungelesenes aus der Ablage, sonst Uhrzeit; beim Drüberfahren Quick Actions.
 - **Tray-Icon:** Linksklick wie der Hotkey. Rechtsklick: Nicht stören, Timer, Test-Event, Log, Autostart, Beenden.
 - **`Ctrl+Alt+Shift+N`:** Notch komplett an/aus (Startmenü-Verknüpfung, wird von `update-notch.ps1` angelegt). Ein erneuter Start der exe beendet ein laufendes Notch.
@@ -44,7 +44,7 @@ Danach im Tray „Mit Windows starten" aktivieren.
 
 **Update:** `powershell -ExecutionPolicy Bypass -File scripts\update-notch.ps1` holt Änderungen von GitHub, baut neu und startet das Notch neu. Schlägt der Build fehl, läuft die alte Version weiter.
 
-**Neues Release:** Tag pushen (`git tag v1.1.0` + `git push origin v1.1.0`). GitHub baut die eigenständige exe und hängt sie ans Release (`.github/workflows/release.yml`).
+**Neues Release:** Version in `src/Notch.App/Notch.App.csproj` erhöhen, dann Tag pushen (`git tag v1.2.0` + `git push origin v1.2.0`) oder den Workflow „Release“ auf GitHub manuell mit Versionsangabe starten. GitHub baut die eigenständige exe und hängt sie ans Release (`.github/workflows/release.yml`).
 
 ## Konfiguration
 
