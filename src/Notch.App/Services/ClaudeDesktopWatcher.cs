@@ -136,8 +136,12 @@ public sealed class ClaudeDesktopWatcher : IDisposable
         var stopNames = new List<string>();
         foreach (AutomationElement b in buttons)
         {
-            var name = b.Current.Name?.Trim() ?? "";
-            if (name.Length > 0 && StopLike.IsMatch(name)) stopNames.Add(name);
+            try
+            {
+                var name = b.Current.Name?.Trim() ?? "";
+                if (name.Length > 0 && StopLike.IsMatch(name)) stopNames.Add(name);
+            }
+            catch (ElementNotAvailableException) { /* Element während des Scans verschwunden */ }
         }
         stopNames.Sort(StringComparer.Ordinal);
 

@@ -30,6 +30,8 @@ public sealed class AppConfig
     public bool WhatsAppPreview { get; set; } = true;
     /// <summary>Gmail-Pop-ups (IMAP); aktiv erst, wenn im Tray ein App-Passwort hinterlegt ist.</summary>
     public bool Gmail { get; set; } = true;
+    /// <summary>Claude Desktop (Chat/Cowork): "arbeitet"/"fertig" anzeigen (liest den Stop-Button per UI Automation).</summary>
+    public bool ClaudeDesktop { get; set; } = true;
     public int FocusMinutes { get; set; } = 25;
     public int BreakMinutes { get; set; } = 5;
     /// <summary>Ordner für Quick Action "Neue Notiz" (leer = Aktion ausgeblendet).</summary>

@@ -26,6 +26,7 @@ public partial class App : Application
     private ToastListenerService? _toasts;
     private ClaudeDesktopWatcher? _claudeDiag;
     private GmailService? _gmail;
+    private ClaudeDesktopMonitor? _claudeDesktop;
     private EventResolver? _resolver;
     private IslandViewModel? _vm;
     private AppConfig _config = new();
@@ -141,6 +142,12 @@ public partial class App : Application
             _toasts = new ToastListenerService(resolver, config.WhatsAppPreview,
                 onRemoved: id => inbox.RemoveByKey("whatsapp", id));
             _ = _toasts.StartAsync();
+        }
+
+        if (config.ClaudeDesktop)
+        {
+            _claudeDesktop = new ClaudeDesktopMonitor(resolver, Dispatcher);
+            _claudeDesktop.Start();
         }
 
         if (config.Gmail)
@@ -345,6 +352,7 @@ public partial class App : Application
         _demo?.Stop();
         _peek?.Dispose();
         _toasts?.Dispose();
+        _claudeDesktop?.Dispose();
         _gmail?.Dispose();
         _claudeDiag?.Dispose();
         _tray?.Dispose();
