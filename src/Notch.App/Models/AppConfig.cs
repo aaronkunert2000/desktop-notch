@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Notch.Services;
 
 namespace Notch.Models;
@@ -10,6 +11,12 @@ public sealed class AppConfig
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
+    private static readonly JsonDocumentOptions DocumentOptions = new()
+    {
+        CommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
     };
 
@@ -28,24 +35,33 @@ public sealed class AppConfig
     /// <summary>Was "Claude" startet: URI, Programm oder Verknüpfung.</summary>
     public string ClaudeCommand { get; set; } = "claude://";
 
-    /// <summary>Reihenfolge: %APPDATA%\Notch\config.json, dann config.json neben der .exe, sonst Defaults.</summary>
+    /// <summary>
+    /// Lädt die Config in Schichten; spätere überschreiben einzelne Werte der früheren:
+    ///   1. config.json neben der .exe        (Standardwerte aus dem Repo)
+    ///   2. config.local.json neben der .exe  (persönlich, nicht im Repo)
+    ///   3. %APPDATA%\Notch\config.json       (persönlich, unabhängig vom Installationsordner)
+    /// Fehlt alles, gelten die Defaults dieser Klasse.
+    /// </summary>
     public static AppConfig Load()
     {
-        string[] candidates =
+        string[] layers =
         {
-            Path.Combine(Log.Dir, "config.json"),
             Path.Combine(AppContext.BaseDirectory, "config.json"),
+            Path.Combine(AppContext.BaseDirectory, "config.local.json"),
+            Path.Combine(Log.Dir, "config.json"),
         };
 
-        foreach (var path in candidates)
+        var merged = new JsonObject();
+        foreach (var path in layers)
         {
             if (!File.Exists(path)) continue;
             try
             {
-                var config = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(path), Options);
-                if (config is null) continue;
+                if (JsonNode.Parse(File.ReadAllText(path), documentOptions: DocumentOptions) is not JsonObject layer)
+                    continue;
+                foreach (var (key, value) in layer)
+                    merged[key.ToLowerInvariant()] = value?.DeepClone();   // gleiche Schlüssel unabhängig von Schreibweise
                 Log.Info($"Config geladen: {path}");
-                return config.Validate();
             }
             catch (Exception ex)
             {
@@ -53,8 +69,15 @@ public sealed class AppConfig
             }
         }
 
-        Log.Info("Keine Config gefunden, nutze Defaults");
-        return new AppConfig();
+        try
+        {
+            return (JsonSerializer.Deserialize<AppConfig>(merged, Options) ?? new AppConfig()).Validate();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Config-Werte ungültig, nutze Defaults", ex);
+            return new AppConfig();
+        }
     }
 
     private AppConfig Validate()

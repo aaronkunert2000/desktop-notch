@@ -21,7 +21,11 @@ Eine Dynamic Island für Windows: eine schwarze Insel oben mittig auf dem Bildsc
 - **Maus oben mittig an den Rand:** Uhrzeit, beim Drüberfahren Quick Actions.
 - **Tray-Icon:** Linksklick wie der Hotkey. Rechtsklick: Nicht stören, Timer, Test-Event, Log, Autostart, Beenden.
 
-## Installation
+## Download (ohne Entwicklungsumgebung)
+
+Fertige `Notch.exe` unter [Releases](../../releases/latest). Läuft ohne installiertes .NET auf Windows 10 (2004) oder 11 mit Intel/AMD. Die Datei ist nicht signiert: Bei „Der Computer wurde durch Windows geschützt" auf **Weitere Informationen → Trotzdem ausführen** klicken.
+
+## Installation aus dem Code
 
 Voraussetzung: [.NET 8 SDK](https://dotnet.microsoft.com/download).
 
@@ -34,9 +38,21 @@ Danach im Tray „Mit Windows starten" aktivieren.
 
 **Update:** `powershell -ExecutionPolicy Bypass -File scripts\update-notch.ps1` holt Änderungen von GitHub, baut neu und startet das Notch neu. Schlägt der Build fehl, läuft die alte Version weiter.
 
+**Neues Release:** Tag pushen (`git tag v1.1.0` + `git push origin v1.1.0`). GitHub baut die eigenständige exe und hängt sie ans Release (`.github/workflows/release.yml`).
+
 ## Konfiguration
 
-`config.json` (wird beim Build neben die exe kopiert). Persönliche Abweichungen gehen in `%APPDATA%\Notch\config.json`, die hat Vorrang.
+Drei Schichten, spätere überschreiben einzelne Werte der früheren:
+
+1. `config.json` im Repo: Standardwerte, ohne persönliche Pfade
+2. `config.local.json` im Projektordner: persönlich, nicht im Repo, wird beim Build mitkopiert
+3. `%APPDATA%\Notch\config.json`: persönlich, unabhängig vom Installationsordner
+
+Beispiel `config.local.json`:
+
+```json
+{ "vaultInbox": "C:\\Pfad\\zum\\Vault\\Inbox" }
+```
 
 | Schlüssel | Bedeutung |
 |---|---|

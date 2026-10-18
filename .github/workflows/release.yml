@@ -1,0 +1,46 @@
+# Baut bei einem Versions-Tag (z. B. v1.0.0) eine eigenständige Notch.exe auf Windows
+# und hängt sie an ein GitHub-Release. Läuft auf GitHub, nicht auf dem eigenen PC.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Eigenständige exe bauen (ohne installiertes .NET lauffähig)
+        run: >
+          dotnet publish src/Notch.App -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -o dist
+
+      - name: Paket schnüren
+        shell: pwsh
+        run: |
+          Get-ChildItem dist
+          Compress-Archive -Path dist/* -DestinationPath Notch-win-x64.zip
+
+      - name: Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Desktop Notch ${{ github.ref_name }}
+          body_path: .github/release-notes.md
+          files: |
+            dist/Notch.exe
+            Notch-win-x64.zip

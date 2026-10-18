@@ -13,8 +13,9 @@
   // Fokus-Timer in Minuten
   "focusMinutes": 25,
   "breakMinutes": 5,
-  // Quick Action "Neue Notiz": Zielordner im Vault, z. B. "C:\\Users\\aaron\\Obsidian\\Vault\\00 Inbox" (leer = aus)
-  "vaultInbox": "C:\\Users\\aaron\\AI\\Obsidian\\Obsidian-Vaults\\Aarons Second Brain\\30_AI_Inbox",
+  // Quick Action "Neue Notiz": Zielordner im Vault (leer = Button aus).
+  // Persönliche Werte gehören in config.local.json (nicht im Repo), siehe README.
+  "vaultInbox": "",
   // Quick Action "Claude": URI oder Programmpfad
   "claudeCommand": "claude://"
 }
