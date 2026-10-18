@@ -1,4 +1,4 @@
-# Baut bei einem Versions-Tag (z. B. v1.0.0) eine eigenständige Notch.exe auf Windows
+# Baut bei einem Versions-Tag (z. B. v1.0.0) oder manuellem Start mit Versionsangabe eine eigenständige Notch.exe auf Windows
 # und hängt sie an ein GitHub-Release. Läuft auf GitHub, nicht auf dem eigenen PC.
 name: Release
 
@@ -6,6 +6,10 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, z. B. v1.0.0'
+        required: true
 
 permissions:
   contents: write
@@ -39,7 +43,9 @@ jobs:
       - name: Release veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
-          name: Desktop Notch ${{ github.ref_name }}
+          tag_name: ${{ inputs.version || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Desktop Notch ${{ inputs.version || github.ref_name }}
           body_path: .github/release-notes.md
           files: |
             dist/Notch.exe
