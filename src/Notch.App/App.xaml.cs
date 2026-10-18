@@ -164,13 +164,22 @@ public partial class App : Application
             return;
         }
 
-        // Ungelesenes zuerst; Quick Actions sind dann die nächste Seite
-        _resolver.Submit(_inbox is { Count: > 0 } ? _inbox.CreateEvent(8) : QuickEvent());
+        // Ausgeblendete Dauer-Vorgänge (z. B. Musik) zurückholen
+        if (_resolver.RestoreParked()) return;
+
+        // Sonst Ungelesenes zuerst; Uhr und Quick Actions sind dann die nächste Seite
+        _resolver.Submit(_inbox is { Count: > 0 } ? _inbox.CreateEvent(8) : StandardEvent(8, openLarge: true));
     }
 
-    private NotchEvent QuickEvent() =>
-        new("notch", EventKind.Info, "Quick Actions", _config.Hotkey,
-            TtlSeconds: 8, Actions: BuildQuickActions(), Id: "quick", OpenLarge: true);
+    /// <summary>Standard-Ansicht: Uhrzeit, Datum, Quick Actions. Immer als letzte Seite erreichbar.</summary>
+    private NotchEvent StandardEvent(int ttlSeconds, bool openLarge)
+    {
+        var now = DateTime.Now;
+        var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+        return new NotchEvent("notch", EventKind.Info, now.ToString("HH:mm", de), now.ToString("dddd, d. MMMM", de),
+            TtlSeconds: ttlSeconds, Actions: BuildQuickActions(), Id: "quick", OpenLarge: openLarge,
+            Glyph: "\uE823");   // Uhr-Symbol
+    }
 
     /// <summary>Seiten für die Punkte: aktive Vorgänge, Ablage (falls ungelesen), ggf. Quick Actions.</summary>
     private IReadOnlyList<NotchEvent> BuildPages()
@@ -178,9 +187,13 @@ public partial class App : Application
         if (_resolver is null || _inbox is null) return Array.Empty<NotchEvent>();
 
         var pages = _resolver.LivePages().ToList();
+        // Per Hotkey ausgeblendete Vorgänge bleiben als Seite erreichbar (ohne wieder aufzutauchen)
+        foreach (var parked in _resolver.ParkedPages())
+            if (pages.All(p => p.Source != parked.Source || p.Id != parked.Id)) pages.Add(parked);
         if (_inbox.Count > 0 && !pages.Any(InboxService.IsInboxEvent)) pages.Add(_inbox.CreateEvent(8));
-        if (InboxService.IsInboxEvent(_resolver.Current) && !pages.Any(p => p is { Source: "notch", Id: "quick" }))
-            pages.Add(QuickEvent());
+        // Standard-Ansicht (Uhr + Quick Actions) immer als letzte Seite
+        if (pages.Count > 0 && !pages.Any(p => p is { Source: "notch", Id: "quick" or "peek" }))
+            pages.Add(StandardEvent(8, openLarge: true));
 
         return pages.OrderByDescending(PagePriority).ToList();
     }
@@ -215,17 +228,8 @@ public partial class App : Application
     {
         if (_vm is null || _resolver is null || _vm.State != IslandState.Idle) return;
 
-        if (_inbox is { Count: > 0 })
-        {
-            _resolver.Submit(_inbox.CreateEvent(4));   // Ungelesenes statt Uhrzeit
-            return;
-        }
-
-        var now = DateTime.Now;
-        var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
-        _resolver.Submit(new NotchEvent("notch", EventKind.Info, now.ToString("HH:mm", de),
-            now.ToString("dddd, d. MMMM", de), TtlSeconds: 3, Actions: BuildQuickActions(), Id: "peek",
-            Glyph: ""));   // Uhr-Symbol
+        // Ungelesenes statt Uhrzeit; Uhr und Quick Actions sind dann die nächste Seite
+        _resolver.Submit(_inbox is { Count: > 0 } ? _inbox.CreateEvent(4) : StandardEvent(3, openLarge: false));
     }
 
     private List<NotchAction> BuildQuickActions()

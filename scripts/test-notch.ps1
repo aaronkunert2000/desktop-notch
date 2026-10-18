@@ -149,6 +149,20 @@ Start-Sleep -Seconds 10; Shot '21-zurueck-zur-vorgabe'
 Send --source build --dismiss
 Send --source test --id t2 --dismiss
 
+# 6b. Dauer-Vorgang per Hotkey aus- und wieder einblenden: muss zurueckkommen; Standard-Ansicht per Mausrad
+Send --source test --id t3 --kind timer --title 'Fokus 20:00' --subtitle 'Restore-Test' --sticky
+Start-Sleep -Milliseconds 1500; Shot '22-dauer-sichtbar'
+Hotkey
+Start-Sleep -Milliseconds 1200; Shot '23-hotkey-aus'
+Hotkey
+Start-Sleep -Milliseconds 1500; Shot '24-hotkey-wieder-da'
+MoveTo 30
+Start-Sleep -Milliseconds 900
+WheelDown; Start-Sleep -Milliseconds 600; WheelDown
+Start-Sleep -Milliseconds 900; Shot '25-standard-ansicht-uhr'
+MoveAway
+Send --source test --id t3 --dismiss
+
 # 7. Abschluss
 Copy-Item (Join-Path $env:NOTCH_DATA_DIR 'notch.log') (Join-Path $out 'notch.log') -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $env:NOTCH_DATA_DIR 'inbox.json') (Join-Path $out 'inbox.json') -ErrorAction SilentlyContinue

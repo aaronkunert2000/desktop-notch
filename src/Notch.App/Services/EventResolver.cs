@@ -78,6 +78,27 @@ public sealed class EventResolver
         try { HideAllCore(); } finally { Changed?.Invoke(); }
     }
 
+    /// <summary>Per Hotkey ausgeblendete Dauer-Vorgänge (für die Seiten-Punkte).</summary>
+    public IReadOnlyList<NotchEvent> ParkedPages() => _parked.Values.ToList();
+
+    /// <summary>Hotkey "Anzeige auf": ausgeblendete Vorgänge zurückholen. false = es gab nichts.</summary>
+    public bool RestoreParked()
+    {
+        try
+        {
+            if (_parked.Count == 0) return false;
+            var now = DateTime.UtcNow;
+            foreach (var e in _parked.Values) _queue.Add((e, now));
+            _parked.Clear();
+            if (_current is null) ShowNext();
+            return true;
+        }
+        finally
+        {
+            Changed?.Invoke();
+        }
+    }
+
     private void HideAllCore()
     {
         if (_current is { Sticky: true }) _parked[Key(_current)] = _current;
