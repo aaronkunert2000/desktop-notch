@@ -54,11 +54,37 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 3. Austauschen
-Get-Process -Name Notch -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-# Warten, bis es wirklich beendet ist: ein zweiter Start wuerde sonst als Aus-Schalter wirken
-Get-Process -Name Notch -ErrorAction SilentlyContinue | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
+# Alle Prozesse beenden, die Dateien aus dem Installationsordner nutzen, und warten bis sie weg sind
+# (ein zweiter Start wuerde sonst als Aus-Schalter wirken)
+function Stop-Notch {
+    Get-Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -eq 'Notch' -or ($_.Path -and $_.Path.StartsWith($target, 'OrdinalIgnoreCase')) } |
+        ForEach-Object {
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            Wait-Process -Id $_.Id -Timeout 10 -ErrorAction SilentlyContinue
+        }
+}
+Stop-Notch
 New-Item -ItemType Directory -Force -Path $target | Out-Null
-Copy-Item -Path (Join-Path $build '*') -Destination $target -Recurse -Force
+
+# Dateiweise kopieren mit Wiederholung: Virenscanner oder ein langsam beendeter Prozess sperren Dateien kurz
+$failed = @()
+foreach ($file in Get-ChildItem -Path $build -Recurse -File) {
+    $dest = Join-Path $target ($file.FullName.Substring($build.Length).TrimStart('\'))
+    New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+    $ok = $false
+    for ($try = 1; $try -le 10 -and -not $ok; $try++) {
+        try { Copy-Item -LiteralPath $file.FullName -Destination $dest -Force -ErrorAction Stop; $ok = $true }
+        catch { if ($try -eq 5) { Stop-Notch }; Start-Sleep -Milliseconds 500 }
+    }
+    if (-not $ok) { $failed += $file.Name }
+}
+if ($failed.Count -gt 0) {
+    Write-Host "Nicht kopiert (gesperrt): $($failed -join ', ')"
+    Notify 'error' 'Notch-Update unvollstaendig' "$($failed.Count) Datei(en) gesperrt, bitte PC neu starten"
+    Start-Process -FilePath (Join-Path $target 'Notch.exe') -ErrorAction SilentlyContinue
+    exit 1
+}
 $exe = Join-Path $target 'Notch.exe'
 
 # 4. Autostart bei der Anmeldung (ausser im Tray bewusst ausgeschaltet)
