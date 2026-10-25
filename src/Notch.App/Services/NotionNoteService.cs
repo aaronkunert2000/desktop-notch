@@ -21,10 +21,13 @@ public static class NotionNoteService
             {
                 [titleProperty] = new JsonObject
                 {
-                    ["title"] = new JsonArray(new JsonObject
-                    {
-                        ["text"] = new JsonObject { ["content"] = title },
-                    }),
+                    // Leerer Titel: Seite ist sofort zum Lostippen bereit
+                    ["title"] = string.IsNullOrEmpty(title)
+                        ? new JsonArray()
+                        : new JsonArray(new JsonObject
+                        {
+                            ["text"] = new JsonObject { ["content"] = title },
+                        }),
                 },
             },
         };

@@ -356,7 +356,7 @@ public partial class App : Application
             try
             {
                 var token = NotionCredentials.Load() ?? throw new InvalidOperationException("Token nicht lesbar");
-                var url = await NotionNoteService.CreateAsync(token, _config.NotionNotesDb, _config.NotionTitleProperty, "Neue Notiz");
+                var url = await NotionNoteService.CreateAsync(token, _config.NotionNotesDb, _config.NotionTitleProperty, "");
                 Log.Info("Notion-Notiz angelegt");
                 Launch(NotionNoteService.ToAppUrl(url));
                 return;
