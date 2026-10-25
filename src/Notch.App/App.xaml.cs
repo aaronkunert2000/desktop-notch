@@ -365,7 +365,7 @@ public partial class App : Application
             {
                 Log.Error("Notion-Notiz fehlgeschlagen", ex);
                 ReportError("Notion fehlgeschlagen", ex.Message);
-                if (string.IsNullOrWhiteSpace(_config.VaultInbox)) return;
+                return;   // Notion ist eingerichtet: kein stilles Ausweichen auf den Vault
             }
         }
 
