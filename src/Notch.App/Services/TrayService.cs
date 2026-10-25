@@ -15,6 +15,9 @@ public sealed record TrayActions(
     Func<bool> IsGmailConnected,
     Action GmailConnect,
     Action GmailDisconnect,
+    Func<bool> IsNotionConnected,
+    Action NotionConnect,
+    Action NotionDisconnect,
     Action Exit);
 
 /// <summary>Tray-Icon mit Menü. Linksklick = Insel/Quick Actions wie der Hotkey.</summary>
@@ -34,12 +37,16 @@ public sealed class TrayService : IDisposable
         var autostart = new Forms.ToolStripMenuItem("Mit Windows starten");
         var gmail = new Forms.ToolStripMenuItem("Gmail verbinden …");
         var gmailOff = new Forms.ToolStripMenuItem("Gmail trennen");
+        var notion = new Forms.ToolStripMenuItem("Notion verbinden …");
+        var notionOff = new Forms.ToolStripMenuItem("Notion trennen");
 
         dnd.Click += (_, _) => actions.ToggleDoNotDisturb();
         timer.Click += (_, _) => actions.ToggleTimer();
         autostart.Click += (_, _) => Autostart.Set(!Autostart.IsEnabled());
         gmail.Click += (_, _) => actions.GmailConnect();
         gmailOff.Click += (_, _) => actions.GmailDisconnect();
+        notion.Click += (_, _) => actions.NotionConnect();
+        notionOff.Click += (_, _) => actions.NotionDisconnect();
 
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(dnd);
@@ -49,6 +56,8 @@ public sealed class TrayService : IDisposable
         menu.Items.Add("Log öffnen", null, (_, _) => actions.OpenLog());
         menu.Items.Add(gmail);
         menu.Items.Add(gmailOff);
+        menu.Items.Add(notion);
+        menu.Items.Add(notionOff);
         menu.Items.Add(autostart);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Beenden", null, (_, _) => actions.Exit());
@@ -62,6 +71,9 @@ public sealed class TrayService : IDisposable
             var connected = actions.IsGmailConnected();
             gmail.Text = connected ? "Gmail neu verbinden …" : "Gmail verbinden …";
             gmailOff.Visible = connected;
+            var notionOn = actions.IsNotionConnected();
+            notion.Text = notionOn ? "Notion neu verbinden …" : "Notion verbinden …";
+            notionOff.Visible = notionOn;
         };
 
         _icon = new Forms.NotifyIcon

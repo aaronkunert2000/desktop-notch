@@ -119,6 +119,13 @@ public partial class App : Application
             OpenLog: () => Launch(Path.Combine(Log.Dir, "notch.log")),
             IsGmailConnected: () => GmailCredentials.Exists,
             GmailConnect: ConnectGmail,
+            IsNotionConnected: () => NotionCredentials.Exists,
+            NotionConnect: ConnectNotion,
+            NotionDisconnect: () =>
+            {
+                NotionCredentials.Delete();
+                Log.Info("Notion getrennt");
+            },
             GmailDisconnect: () =>
             {
                 _gmail?.Stop();
@@ -284,7 +291,7 @@ public partial class App : Application
         {
             new("quick.timer", running ? "Timer stoppen" : $"Fokus {_timer?.FocusMinutes ?? 25} min", Primary: true),
         };
-        if (!string.IsNullOrWhiteSpace(_config.VaultInbox)) actions.Add(new("quick.note", "Neue Notiz"));
+        if (NotionReady || !string.IsNullOrWhiteSpace(_config.VaultInbox)) actions.Add(new("quick.note", "Neue Notiz"));
         actions.Add(new("quick.claude", "Claude"));
         return actions;
     }
@@ -309,7 +316,46 @@ public partial class App : Application
         Launch(_config.ClaudeCommand);
     }
 
-    private void CreateNote()
+    private bool NotionReady => NotionCredentials.Exists && !string.IsNullOrWhiteSpace(_config.NotionNotesDb);
+
+    private void ConnectNotion()
+    {
+        using var dialog = new SecretPromptDialog("Notion verbinden",
+            "Interne Integration unter notion.so/my-integrations anlegen, [DB] Notes mit ihr teilen " +
+            "(Seite \"...\" > Verbindungen) und das Token (secret_… / ntn_…) hier einfügen.",
+            "Integrations-Token");
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK || dialog.Secret.Length == 0) return;
+
+        NotionCredentials.Save(dialog.Secret);
+        _resolver!.Submit(new NotchEvent("notch", EventKind.Info, "Notion verbunden",
+            string.IsNullOrWhiteSpace(_config.NotionNotesDb) ? "notionNotesDb in config fehlt" : "Neue Notiz legt Seiten an",
+            Id: "notion-setup", TtlSeconds: 4));
+    }
+
+    private async void CreateNote()
+    {
+        if (NotionReady)
+        {
+            try
+            {
+                var token = NotionCredentials.Load() ?? throw new InvalidOperationException("Token nicht lesbar");
+                var url = await NotionNoteService.CreateAsync(token, _config.NotionNotesDb, _config.NotionTitleProperty, "Neue Notiz");
+                Log.Info("Notion-Notiz angelegt");
+                Launch(NotionNoteService.ToAppUrl(url));
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Notion-Notiz fehlgeschlagen", ex);
+                ReportError("Notion fehlgeschlagen", ex.Message);
+                if (string.IsNullOrWhiteSpace(_config.VaultInbox)) return;
+            }
+        }
+
+        CreateVaultNote();
+    }
+
+    private void CreateVaultNote()
     {
         var dir = _config.VaultInbox;
         if (!Directory.Exists(dir))

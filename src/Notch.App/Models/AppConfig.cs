@@ -32,6 +32,10 @@ public sealed class AppConfig
     public bool Gmail { get; set; } = true;
     /// <summary>Claude Desktop (Chat/Cowork): "arbeitet"/"fertig" anzeigen (liest den Stop-Button per UI Automation).</summary>
     public bool ClaudeDesktop { get; set; } = true;
+    /// <summary>ID der Notion-Datenbank für "Neue Notiz" (leer = Notion aus). Token wird im Tray hinterlegt.</summary>
+    public string NotionNotesDb { get; set; } = "";
+    /// <summary>Name der Titel-Eigenschaft dieser Datenbank.</summary>
+    public string NotionTitleProperty { get; set; } = "Name";
     public int FocusMinutes { get; set; } = 25;
     public int BreakMinutes { get; set; } = 5;
     /// <summary>Ordner für Quick Action "Neue Notiz" (leer = Aktion ausgeblendet).</summary>
