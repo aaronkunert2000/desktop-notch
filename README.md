@@ -100,3 +100,7 @@ scripts/
 ├─ test-notch.ps1     Smoke-Test mit Screenshots → test-results/ (Doppelklick: test.cmd)
 └─ update-notch.ps1   Pull + Build + Neustart
 ```
+
+## Lizenz
+
+[MIT](LICENSE)
