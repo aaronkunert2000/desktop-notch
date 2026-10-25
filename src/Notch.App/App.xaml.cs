@@ -318,18 +318,35 @@ public partial class App : Application
 
     private bool NotionReady => NotionCredentials.Exists && !string.IsNullOrWhiteSpace(_config.NotionNotesDb);
 
-    private void ConnectNotion()
+    private async void ConnectNotion()
     {
         using var dialog = new SecretPromptDialog("Notion verbinden",
             "Interne Integration unter notion.so/my-integrations anlegen, [DB] Notes mit ihr teilen " +
-            "(Seite \"...\" > Verbindungen) und das Token (secret_… / ntn_…) hier einfügen.",
-            "Integrations-Token");
+            "(Seite \"...\" > Verbindungen) und das Integration-Secret (ntn_… / secret_…) hier einfügen.",
+            "Integration-Secret");
         if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK || dialog.Secret.Length == 0) return;
 
-        NotionCredentials.Save(dialog.Secret);
+        var token = dialog.Secret;
+        if (string.IsNullOrWhiteSpace(_config.NotionNotesDb))
+        {
+            ReportError("Notion nicht eingerichtet", "notionNotesDb fehlt in der config");
+            return;
+        }
+
+        try
+        {
+            await NotionNoteService.VerifyAsync(token, _config.NotionNotesDb);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Notion-Prüfung fehlgeschlagen", ex);
+            ReportError("Notion nicht verbunden", ex.Message);
+            return;   // ungültiges Token wird nicht gespeichert
+        }
+
+        NotionCredentials.Save(token);
         _resolver!.Submit(new NotchEvent("notch", EventKind.Info, "Notion verbunden",
-            string.IsNullOrWhiteSpace(_config.NotionNotesDb) ? "notionNotesDb in config fehlt" : "Neue Notiz legt Seiten an",
-            Id: "notion-setup", TtlSeconds: 4));
+            "Neue Notiz legt Seiten an", Id: "notion-setup", TtlSeconds: 4));
     }
 
     private async void CreateNote()

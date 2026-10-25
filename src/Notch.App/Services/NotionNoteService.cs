@@ -49,6 +49,26 @@ public static class NotionNoteService
         return url;
     }
 
+    /// <summary>Prüft Token und Freigabe der Datenbank (liest nur). Wirft mit verständlicher Meldung.</summary>
+    public static async Task VerifyAsync(string token, string databaseId)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.notion.com/v1/databases/{databaseId}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("Notion-Version", "2022-06-28");
+
+        using var response = await Http.SendAsync(request).ConfigureAwait(false);
+        if (response.IsSuccessStatusCode) return;
+
+        var text = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var hint = (int)response.StatusCode switch
+        {
+            401 => "Token ungültig (Integration-Secret kopieren, nicht die ID)",
+            404 => "Datenbank nicht mit der Integration geteilt ([DB] Notes > ··· > Verbindungen)",
+            _ => TryReadMessage(text) ?? response.ReasonPhrase ?? "Fehler",
+        };
+        throw new InvalidOperationException(hint);
+    }
+
     /// <summary>https://www.notion.so/… → notion://www.notion.so/… (öffnet die Desktop-App statt des Browsers).</summary>
     public static string ToAppUrl(string url) =>
         url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? "notion://" + url["https://".Length..] : url;
