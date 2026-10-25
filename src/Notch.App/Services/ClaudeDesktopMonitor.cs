@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Automation;
 using System.Windows.Threading;
@@ -20,6 +21,13 @@ public sealed class ClaudeDesktopMonitor : IDisposable
     private const int MissesToFinish = 3;     // ~4,5 s ohne Stop-Button = fertig (der Button flackert zwischen Werkzeugaufrufen)
     private const int MinWorkingSeconds = 4;  // kürzere Läufe sind kein "fertig" wert
     private const int RefreshSeconds = 60;
+    // Im Hintergrund (minimiert/verdeckt) friert Chromium den UI-Baum ein: der Stop-Button bliebe "sichtbar".
+    // Dort entscheidet die CPU-Last der Claude-Prozesse; so lange Ruhe = fertig.
+    private const double ActiveCpuPercent = 2.0;   // Prozent eines Kerns
+    private const int BackgroundQuietSeconds = 15;
+
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hWnd);
 
     private static readonly Regex StopLike = new(
         @"^(stop( response| generating)?|stopp(en)?|antwort (stoppen|abbrechen)|generierung (stoppen|abbrechen))$",
@@ -34,6 +42,10 @@ public sealed class ClaudeDesktopMonitor : IDisposable
     private DateTime _startedAt;
     private DateTime _lastRefresh;
     private int _pid;
+    private double _lastPercent;
+    private TimeSpan _cpuLast;
+    private DateTime _cpuAt = DateTime.UtcNow;
+    private DateTime _lastCpuActive = DateTime.UtcNow;
 
     public ClaudeDesktopMonitor(EventResolver resolver, Dispatcher dispatcher)
     {
@@ -80,6 +92,9 @@ public sealed class ClaudeDesktopMonitor : IDisposable
         if (window is null) return false;
         _pid = window.Id;
 
+        var cpuActive = SampleCpu();
+        var background = IsIconic(window.MainWindowHandle) || GetForegroundWindow() != window.MainWindowHandle;
+
         try
         {
             var root = AutomationElement.FromHandle(window.MainWindowHandle);
@@ -90,7 +105,8 @@ public sealed class ClaudeDesktopMonitor : IDisposable
                 try
                 {
                     var name = b.Current.Name?.Trim();
-                    if (!string.IsNullOrEmpty(name) && StopLike.IsMatch(name)) return true;
+                    if (!string.IsNullOrEmpty(name) && StopLike.IsMatch(name))
+                        return !background || (DateTime.UtcNow - _lastCpuActive).TotalSeconds < BackgroundQuietSeconds;
                 }
                 catch (ElementNotAvailableException) { return null; }
             }
@@ -98,6 +114,31 @@ public sealed class ClaudeDesktopMonitor : IDisposable
         }
         catch (ElementNotAvailableException) { return null; }
         catch (InvalidOperationException) { return null; }
+    }
+
+    /// <summary>CPU-Last aller Claude-Prozesse seit dem letzten Aufruf; merkt sich den Zeitpunkt der letzten Aktivität.</summary>
+    private bool SampleCpu()
+    {
+        var total = TimeSpan.Zero;
+        foreach (var p in Process.GetProcessesByName("claude"))
+        {
+            try { total += p.TotalProcessorTime; }
+            catch { /* Prozess beendet oder kein Zugriff */ }
+            finally { p.Dispose(); }
+        }
+
+        var now = DateTime.UtcNow;
+        var elapsed = (now - _cpuAt).TotalMilliseconds;
+        var percent = elapsed > 0 && _cpuLast > TimeSpan.Zero
+            ? Math.Max(0, (total - _cpuLast).TotalMilliseconds) / elapsed * 100.0
+            : 0;
+        _cpuLast = total;
+        _cpuAt = now;
+
+        var active = percent >= ActiveCpuPercent;
+        if (active) _lastCpuActive = now;
+        _lastPercent = percent;
+        return active;
     }
 
     private void Apply(bool stopVisible)
@@ -110,6 +151,7 @@ public sealed class ClaudeDesktopMonitor : IDisposable
             {
                 _working = true;
                 _startedAt = _lastRefresh = now;
+                Log.Info($"Claude Desktop arbeitet (CPU {_lastPercent:0.0} %)");
                 Post(Running());
                 return;
             }
@@ -126,6 +168,7 @@ public sealed class ClaudeDesktopMonitor : IDisposable
 
         _working = false;
         _misses = 0;
+        Log.Info($"Claude Desktop fertig nach {(now - _startedAt).TotalSeconds:0} s (CPU {_lastPercent:0.0} %)");
         if ((now - _startedAt).TotalSeconds < MinWorkingSeconds)
         {
             Post(null);
